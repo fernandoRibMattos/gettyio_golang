@@ -10,15 +10,15 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
-// ========== Data
+// ========== Tabela CLIENTE
 
-type Data struct {
+type Cliente struct {
 	Id    bson.ObjectId `form:"id" bson:"_id,omitempty" json:"id"`
 	Name  string        `form:"name" bson:"name" json:"name"`
 	Idade int           `form:"idade" bson:"idade" json:"idade"`
 }
 
-// ========== MongoDB
+// ========== MongoDB - Estrutura
 
 type MongoDB struct {
 	Host             string
@@ -30,6 +30,8 @@ type MongoDB struct {
 	Info             *mgo.DialInfo
 	Session          *mgo.Session
 }
+
+// ========== MongoDB - Configuração
 
 func (mongo *MongoDB) SetDefault() { // {{{
 	mongo.Host = "localhost"
@@ -44,6 +46,8 @@ func (mongo *MongoDB) SetDefault() { // {{{
 	}
 } // }}}
 
+// ========== MongoDB -
+
 func (mongo *MongoDB) Drop() (err error) { // {{{
 	session := mongo.Session.Clone()
 	defer session.Close()
@@ -55,17 +59,21 @@ func (mongo *MongoDB) Drop() (err error) { // {{{
 	return nil
 } // }}}
 
+// ========== MongoDB -
+
 func (mongo *MongoDB) Init() (err error) { // {{{
 	err = mongo.Drop()
 	if err != nil {
 		fmt.Printf("\n drop database error: %v\n", err)
 	}
 
-	data := Data{}
-	err = mongo.PostData(&data)
+	cliente := Cliente{}
+	err = mongo.PostCliente(&cliente)
 
 	return err
 } // }}}
+
+// ========== MongoDB -
 
 func (mongo *MongoDB) SetSession() (err error) {
 	mongo.Session, err = mgo.DialWithInfo(mongo.Info)
@@ -78,33 +86,57 @@ func (mongo *MongoDB) SetSession() (err error) {
 	return err
 }
 
-// ========== model
+// ========== MODEL
 
-func (mongo *MongoDB) GetData() (dates []Data, err error) { // {{{
+// ========== Consulta - Cliente
+
+func (mongo *MongoDB) GetCliente() (clientes []Cliente, err error) { // {{{
 	session := mongo.Session.Clone()
 	defer session.Close()
 
-	err = session.DB(mongo.Database).C("Data").Find(bson.M{}).All(&dates)
-	return dates, err
+	err = session.DB(mongo.Database).C("Cliente").Find(bson.M{}).All(&clientes)
+	return clientes, err
 } // }}}
 
-func (mongo *MongoDB) PostData(data *Data) (err error) { // {{{
+// ========== Insere - Cliente
+
+func (mongo *MongoDB) PostCliente(cliente *Cliente) (err error) { // {{{
 	session := mongo.Session.Clone()
 	defer session.Close()
 
-	err = session.DB(mongo.Database).C("Data").Insert(&data)
+	err = session.DB(mongo.Database).C("Cliente").Insert(&cliente)
+	return err
+} // }}}
+
+// ========== Altera - Cliente
+
+func (mongo *MongoDB) PutCliente(cliente *Cliente) (err error) { // {{{
+	session := mongo.Session.Clone()
+	defer session.Close()
+
+	err = session.DB(mongo.Database).C("Cliente").UpdateId(cliente.Id, bson.M{"$set": &cliente})
+	return err
+} // }}}
+
+// ========== Delete - Cliente
+
+func (mongo *MongoDB) DeleteCliente(cliente *Cliente) (err error) { // {{{
+	session := mongo.Session.Clone()
+	defer session.Close()
+
+	err = session.DB(mongo.Database).C("Cliente").RemoveId(cliente.Id)
 	return err
 } // }}}
 
 // ========== controller
 
-func getData(c *gin.Context) { // {{{
+func getCliente(c *gin.Context) { // {{{
 	mongo, ok := c.Keys["mongo"].(*MongoDB)
 	if !ok {
 		c.JSON(400, gin.H{"message": "can't reach db", "body": nil})
 	}
 
-	data, err := mongo.GetData()
+	data, err := mongo.GetCliente()
 	// fmt.Printf("\ndata: %v, ok: %v\n", data, ok)
 	if err != nil {
 		c.JSON(400, gin.H{"message": "can't get data from database", "body": nil})
@@ -113,22 +145,60 @@ func getData(c *gin.Context) { // {{{
 	}
 } // }}}
 
-func postData(c *gin.Context) { // {{{
+func postCliente(c *gin.Context) { // {{{
 	mongo, ok := c.Keys["mongo"].(*MongoDB)
 	if !ok {
 		c.JSON(400, gin.H{"message": "can't connect to db", "body": nil})
 	}
-	var req Data
+	var req Cliente
 	err := c.Bind(&req)
 	if err != nil {
 		c.JSON(400, gin.H{"message": "Incorrect data", "body": nil})
 		return
 	} else {
-		err := mongo.PostData(&req)
+		err := mongo.PostCliente(&req)
 		if err != nil {
 			c.JSON(400, gin.H{"message": "error post to db", "body": nil})
 		}
 		c.JSON(200, gin.H{"message": "post data sucess", "body": req})
+	}
+} // }}}
+
+func putCliente(c *gin.Context) { // {{{
+	mongo, ok := c.Keys["mongo"].(*MongoDB)
+	if !ok {
+		c.JSON(400, gin.H{"message": "can't connect to db", "body": nil})
+	}
+	var req Cliente
+	err := c.Bind(&req)
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Incorrect data", "body": nil})
+		return
+	} else {
+		err := mongo.PutCliente(&req)
+		if err != nil {
+			c.JSON(400, gin.H{"message": "error put to db", "body": nil})
+		}
+		c.JSON(200, gin.H{"message": "put data sucess", "body": req})
+	}
+} // }}}
+
+func deleteCliente(c *gin.Context) { // {{{
+	mongo, ok := c.Keys["mongo"].(*MongoDB)
+	if !ok {
+		c.JSON(400, gin.H{"message": "can't connect to db", "body": nil})
+	}
+	var req Cliente
+	err := c.Bind(&req)
+	if err != nil {
+		c.JSON(400, gin.H{"message": "Incorrect data", "body": nil})
+		return
+	} else {
+		err := mongo.DeleteCliente(&req)
+		if err != nil {
+			c.JSON(400, gin.H{"message": "error delete to db", "body": nil})
+		}
+		c.JSON(200, gin.H{"message": "delete data sucess", "body": req})
 	}
 } // }}}
 
@@ -157,8 +227,10 @@ func SetupRouter() *gin.Engine {
 	router.Use(gin.Recovery())
 	router.Use(MiddleDB(&mongo))
 
-	router.GET("/data", getData)
-	router.POST("/data", postData)
+	router.GET("/cliente", getCliente)
+	router.POST("/cliente", postCliente)
+	router.PUT("/cliente", putCliente)
+	router.DELETE("/cliente", deleteCliente)
 	return router
 }
 
