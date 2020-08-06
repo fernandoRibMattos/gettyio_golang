@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -57,20 +56,6 @@ func (mongo *MongoDB) Drop() (err error) { // {{{
 		return err
 	}
 	return nil
-} // }}}
-
-// ========== MongoDB -
-
-func (mongo *MongoDB) Init() (err error) { // {{{
-	err = mongo.Drop()
-	if err != nil {
-		fmt.Printf("\n drop database error: %v\n", err)
-	}
-
-	customer := Customer{}
-	err = mongo.PostCustomer(&customer)
-
-	return err
 } // }}}
 
 // ========== MongoDB -
